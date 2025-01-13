@@ -1,0 +1,74 @@
+@extends('frontEnd.layouts.master')
+@section('title','Customer Login')
+@section('content')
+<section class="auth-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-sm-5">
+                <div class="form-content">
+                    <p class="auth-title"> Customer Login  </p>
+                    <form action="{{route('customer.signin')}}" method="POST"  data-parsley-validate="">
+                        @csrf
+                        <div class="form-group mb-3">
+                            <label for="phone">Mobile Number </label>
+                            <input type="number" id="phone" class="form-control @error('phone') is-invalid @enderror" name="phone" value="{{ old('phone') }}"  required>
+                            @error('phone')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+                        <!-- col-end -->
+                        <div class="form-group mb-3">
+                            <label for="password">Password</label>
+                            <div class="input-group">
+                                <input type="password" id="password" class="form-control @error('password') is-invalid @enderror" name="password" value="{{ old('password') }}" required>
+                                <div class="input-group-append">
+                                    <span class="input-group-text" id="togglePassword">
+                                        <i class="fa fa-eye-slash"></i>
+                                    </span>
+                                </div>
+                            </div>
+                            @error('password')
+                                <span class="invalid-feedback" role="alert">
+                                    <strong>{{ $message }}</strong>
+                                </span>
+                            @enderror
+                        </div>
+                        <!-- col-end -->
+                        <a href="{{route('customer.forgot.password')}}" class="forget-link"><i class="fa-solid fa-unlock"></i> Forgot password?</a>
+                        <div class="form-group mb-3">
+                            <button class="submit-btn"> Login </button>
+                        </div>
+                     <!-- col-end -->
+                     </form>
+                     <div class="register-now no-account">
+                        <p> If you don't have an account? </p>
+                        <a href="{{route('customer.register')}}"><i data-feather="edit-3"></i> Registration</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+@endsection
+@push('script')
+<script src="{{asset('public/frontEnd/')}}/js/parsley.min.js"></script>
+<script src="{{asset('public/frontEnd/')}}/js/form-validation.init.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const togglePassword = document.querySelector('#togglePassword');
+    const password = document.querySelector('#password');
+
+    togglePassword.addEventListener('click', function () {
+        // Toggle the type attribute
+        const type = password.getAttribute('type') === 'password' ? 'text' : 'password';
+        password.setAttribute('type', type);
+
+        // Toggle the eye icon
+        this.querySelector('i').classList.toggle('fa-eye');
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+});
+</script>
+@endpush

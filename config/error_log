@@ -1,0 +1,4 @@
+[09-Jun-2024 21:27:39 UTC] PHP Fatal error:  Uncaught Error: Call to undefined function env() in /home/luxuriousbd/public_html/config/database.php:18
+Stack trace:
+#0 {main}
+  thrown in /home/luxuriousbd/public_html/config/database.php on line 18
