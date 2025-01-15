@@ -14,7 +14,7 @@
     td{
         font-size: 16px;
     }
-   @page { 
+   @page {
     margin:0px;
     }
    @media print {
@@ -103,12 +103,12 @@
                         </tbody>
                     </table>
                     <div class="invoice-bottom">
-                        
+
                         <table class="table" style="width: 300px; float: right;    margin-bottom: 30px;">
                             <tbody style="background:#f1f9f8">
                                 <tr>
                                     <td><strong>SubTotal</strong></td>
-                                    <td><strong>৳{{$order->orderdetails->sum('sale_price')}}</strong></td>
+                                    <td><strong>৳{{$order->amount - ($order->shipping_charge) }}</strong></td>
                                 </tr>
                                 <tr>
                                     <td><strong>Shipping(+)</strong></td>

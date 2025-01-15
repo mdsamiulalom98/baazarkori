@@ -15,7 +15,7 @@
     td{
         font-size: 16px;
     }
-   @page { 
+   @page {
     margin:0px;
     }
    @media print {
@@ -76,9 +76,9 @@
                                         @else
                                          01X XXXX XXXX
                                         @endif
-                                        
+
                                     </p>
-                                        
+
                                     <p style="font-size:16px;line-height:1.8;color:#222;text-align: right;">{{$order->shipping?$order->shipping->district:''}}</p>
                                     <p style="font-size:16px;line-height:1.8;color:#222;text-align: right;">{{$order->shipping?$order->shipping->area:''}}</p>
                                     <p style="font-size:16px;line-height:1.8;color:#222;text-align: right;">{{$order->shipping?$order->shipping->address:''}}</p>
@@ -106,7 +106,7 @@
                                 <td>{{$loop->iteration}}</td>
                                 <td><img src="{{ asset($value->image ? $value->image->image : '') }}" height="50" width="50" alt=""></td>
                                 <td>{{$value->product_name}} <br> @if($value->product_size) <small>Size: {{$value->product_size}}</small> @endif   @if($value->product_color) <small>Color: {{$value->product_color}}</small> @endif </td>
-                                
+
                                 <td>৳ {{ $sellertotal }}</td>
                                 <td>{{$value->qty}}</td>
                                 <td>৳{{($sellertotal)*$value->qty}}</td>
@@ -115,12 +115,12 @@
                         </tbody>
                     </table>
                     <div class="invoice-bottom">
-                        
+
                         <table class="table" style="width: 300px; float: right;    margin-bottom: 30px;">
                             <tbody style="background:#f1f9f8">
                                 <tr>
                                     <td><strong>SubTotal</strong></td>
-                                    <td><strong>৳{{ $order->orderdetails->sum(fn($detail) => ($detail->sale_price ?? 0) - ($detail->commission ?? 0)) }}</strong></td>
+                                    <td><strong>৳{{ $order->amount - ($order->shipping_charge + $order->commission) }}</strong></td>
                                 </tr>
                                 <tr>
                                     <td><strong>Shipping(+)</strong></td>

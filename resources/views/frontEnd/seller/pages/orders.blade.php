@@ -66,7 +66,7 @@
                             </td>
                             <td>{{$value->invoice_id}}</td>
                             <td>{{date('d-m-Y', strtotime($value->updated_at))}}<br> {{date('h:i:s a', strtotime($value->updated_at))}}</td>
-                            
+
                             <td>
                                 @if($value->uddokta)
                                     @if($value->uddokta->seller_type == 1)
@@ -75,9 +75,9 @@
                                 @else
                                   No
                                 @endif
-                                
+
                             </td>
-                            
+
                             <td>
                             @if($value->uddokta)
                                 @if($value->uddokta->seller_type == 2)
@@ -85,12 +85,12 @@
                                 @else No @endif
                             @else
                               No
-                            @endif  
+                            @endif
                             </td>
-                            
-                            <td>{{ ($value->amount ?? 0) - ($value->commission ?? 0) }} Tk</td>
+
+                            <td>{{ ($value->amount ?? 0) - (($value->commission ?? 0) + ($value->seller_commission ?? 0)) }} Tk</td>
                             <td>{{$value->orderdetails->sum('qty') ?? '0'}}</td>
-                           
+
 
 
                             <td>{{$value->status->name}}</td>

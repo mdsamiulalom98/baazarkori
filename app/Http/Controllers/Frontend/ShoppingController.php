@@ -41,19 +41,18 @@ class ShoppingController extends Controller
                 'whole_sell_price' => $wholesell_price,
                 'reseller_price' => $wholesell_price,
                 'advance' => $advance_amount,
-                'seller_id'=>$product->seller_id,
+                'seller_id' => $product->seller_id,
 
             ]
         ]);
         // return redirect()->back();
         return response()->json($cartinfo);
-
-
     }
 
     public function cart_show()
     {
         $data = Cart::instance('shopping')->content();
+        // return $data;
         return view('frontEnd.layouts.pages.cart', compact('data'));
     }
 
@@ -61,53 +60,32 @@ class ShoppingController extends Controller
     {
         $product = Product::where(['id' => $request->id])->first();
         $product_qty = $request->qty;
-        
         if ($request->details_method == 'wholesell') {
-
             if (Auth::guard('customer')->user()) {
                 if (Auth::guard('customer')->user()->seller_type != 0) {
-                    $currentDate = Carbon::now()->format('Y-m-d');   
-                    if($currentDate <= Auth::guard('customer')->user()->activation) {
-                        $productPrice = $product->whole_sell_price;
-                        $product_qty = $request->qty;
-                    } else {
-                        Toastr::error('Your Reseller Activation has been revoked');
-                        return redirect()->back();
-                    }
-                } else {
-                    $product_qty = $request->qty;
                     $productPrice = $product->whole_sell_price;
-                     if ($product_qty >= 5) {
-                            $product_qty = $request->qty;
-                        } else {
-                            $product_qty = 5;
-                        }
-                }
-            }else{
-                $product_qty = $request->qty;
-                $productPrice = $product->whole_sell_price;
-                if ($product_qty >= 5) {
                     $product_qty = $request->qty;
+
                 } else {
-                    $product_qty = 5;
+                    $productPrice = $product->whole_sell_price;
+                    $product_qty = max(5, $product_qty, $request->qty);
                 }
-                    
+            } else {
+                $productPrice = $product->whole_sell_price;
+                $product_qty = max(5, $product_qty, $request->qty);
             }
-
-
         } else {
             $productPrice = $product->new_price;
         }
         $advance_amount = ($product->new_price * $product->advance) / 100;
 
-        
 
         if (Auth::guard('customer')->user()) {
             if (Auth::guard('customer')->user()->seller_type != 0) {
-                if (Auth::guard('customer')->user()->balance < 200) {
-                    Toastr::error('Your account balance low', 'Sorry!');
-                    return redirect()->back();
-                }
+                // if (Auth::guard('customer')->user()->balance < 200) {
+                //     Toastr::error('Your account balance low', 'Sorry!');
+                //     return redirect()->back();
+                // }
             }
             Cart::instance('shopping')->add([
                 'id' => $product->id,
@@ -122,21 +100,21 @@ class ShoppingController extends Controller
                     'product_size' => $request->product_size,
                     'product_color' => $request->product_color,
                     'pro_unit' => $request->pro_unit,
-                    'seller_id'=>$product->seller_id,
-                    'proCommission'=>$product->proCommission,
-                    'product_code'=>$product->proCode,
+                    'seller_id' => $product->seller_id,
+                    'proCommission' => $product->proCommission,
+                    'product_code' => $product->proCode,
                     'whole_sell_price' => $productPrice,
                     'reseller_price' => $productPrice,
                     'advance' => $advance_amount,
                 ],
             ]);
             Toastr::success('Product successfully add to cart', 'Success!');
-            if($request->add_to_cart){
+            if ($request->add_to_cart) {
                 return redirect()->back();
             }
             return redirect()->route('customer.checkout');
-        }else{
-                Cart::instance('shopping')->add([
+        } else {
+            Cart::instance('shopping')->add([
                 'id' => $product->id,
                 'name' => $product->name,
                 'qty' => $product_qty,
@@ -149,16 +127,16 @@ class ShoppingController extends Controller
                     'product_size' => $request->product_size,
                     'product_color' => $request->product_color,
                     'pro_unit' => $request->pro_unit,
-                    'seller_id'=>$product->seller_id,
-                    'proCommission'=>$product->proCommission,
-                    'product_code'=>$product->proCode,
+                    'seller_id' => $product->seller_id,
+                    'proCommission' => $product->proCommission,
+                    'product_code' => $product->proCode,
                     'whole_sell_price' => $productPrice,
                     'reseller_price' => $productPrice,
                     'advance' => $advance_amount,
                 ],
             ]);
             Toastr::success('Product successfully add to cart', 'Success!');
-            if($request->add_to_cart){
+            if ($request->add_to_cart) {
                 return redirect()->back();
             }
             return redirect()->route('customer.checkout');
@@ -294,8 +272,8 @@ class ShoppingController extends Controller
     {
         $item = Cart::instance('shopping')->get($request->id);
         $qty = $item->qty;
-        if($qty <= 5) {
-            if(Auth::guard('customer')->check() && Auth::guard('customer')->user()->seller_type != 0){
+        if ($qty <= 5) {
+            if (Auth::guard('customer')->check() && Auth::guard('customer')->user()->seller_type != 0) {
                 $qty = max(0, $item->qty - 1);
             }
         } else {
@@ -324,8 +302,8 @@ class ShoppingController extends Controller
     {
         $item = Cart::instance('shopping')->get($request->id);
         $qty = $item->qty;
-        if($qty <= 5) {
-            if(Auth::guard('customer')->check() && Auth::guard('customer')->user()->seller_type != 0){
+        if ($qty <= 5) {
+            if (Auth::guard('customer')->check() && Auth::guard('customer')->user()->seller_type != 0) {
                 $qty = max(0, $item->qty - 1);
             }
         } else {
@@ -368,26 +346,27 @@ class ShoppingController extends Controller
         $data = Cart::instance('shopping')->content();
         return view('frontEnd.layouts.ajax.cart_bn', compact('data'));
     }
-    public function product_size(Request $request) {
+    public function product_size(Request $request)
+    {
         // Find the product by ID
         $product = Product::where('id', $request->id)
             ->where('status', 1)
             ->first();
-    
+
         if (!$product) {
             return response()->json(['error' => 'Product not found or inactive.'], 404);
         }
-    
+
         // Get the cart content
         $cart = Cart::instance('shopping')->content();
-    
+
         // Find the item in the cart with the given product_id
         $item = $cart->firstWhere('id', $request->id);
-    
+
         if (!$item) {
             return response()->json(['error' => 'Product not found in cart.'], 404);
         }
-    
+
         // Update the cart item options based on the selected size
         $cartinfo = Cart::instance('shopping')->update($item->rowId, [
             'options' => [
@@ -397,37 +376,38 @@ class ShoppingController extends Controller
                 'purchase_price' => $product->purchase_price,
                 'product_color' => $item->options->product_color,
                 'product_size' => $request->product_size,
-                'seller_id'=>$product->seller_id,
+                'seller_id' => $product->seller_id,
             ]
         ]);
-    
+
         // Get the updated cart content
         $data = Cart::instance('shopping')->content();
-    
+
         // Return the updated cart view
         return view('frontEnd.layouts.ajax.cart_bn', compact('data'));
     }
 
-    public function product_color(Request $request) {
+    public function product_color(Request $request)
+    {
         // Find the product by ID
         $product = Product::where('id', $request->id)
             ->where('status', 1)
             ->first();
-    
+
         if (!$product) {
             return response()->json(['error' => 'Product not found or inactive.'], 404);
         }
-    
+
         // Get the cart content
         $cart = Cart::instance('shopping')->content();
-    
+
         // Find the item in the cart with the given product_id
         $item = $cart->firstWhere('id', $request->id);
-    
+
         if (!$item) {
             return response()->json(['error' => 'Product not found in cart.'], 404);
         }
-    
+
         // Update the cart item options based on the selected size
         $cartinfo = Cart::instance('shopping')->update($item->rowId, [
             'options' => [
@@ -437,13 +417,13 @@ class ShoppingController extends Controller
                 'purchase_price' => $product->purchase_price,
                 'product_color' => $request->product_color,
                 'product_size' => $item->options->product_size,
-                'seller_id'=>$product->seller_id,
+                'seller_id' => $product->seller_id,
             ]
         ]);
-    
+
         // Get the updated cart content
         $data = Cart::instance('shopping')->content();
-    
+
         // Return the updated cart view
         return view('frontEnd.layouts.ajax.cart_bn', compact('data'));
     }
@@ -572,7 +552,7 @@ class ShoppingController extends Controller
                     'slug' => $product->slug,
                     'purchase_price' => $product->purchase_price,
                     'whole_sell_price' => $product->whole_sell_price,
-                    'seller_id'=>$product->seller_id,
+                    'seller_id' => $product->seller_id,
                 ]
             ]);
 

@@ -197,6 +197,7 @@ class OrderController extends Controller
         $order->save();
 
         if ($request->status == 6) {
+
             $orders_details = OrderDetails::select('id', 'order_id', 'product_id', 'qty')->where('order_id', $order->id)->get();
             foreach ($orders_details as $order_detail) {
                 $product = Product::select('id', 'stock', 'sold')->find($order_detail->product_id);
@@ -242,7 +243,7 @@ class OrderController extends Controller
                         'user_type'   => 'seller',
                         'amount'      => $add_balance,
                         'balance'     => $seller_update->balance,
-                        'amount_type' => 'credit', 
+                        'amount_type' => 'credit',
                         'note'        => 'order earning',
                         'status'      => 'complete',
                     ]);
@@ -260,31 +261,59 @@ class OrderController extends Controller
                     'user_type'   => 'customer',
                     'amount'      => $order->commission,
                     'balance'     => $balance_update->balance,
-                    'amount_type' => 'credit', 
+                    'amount_type' => 'credit',
                     'note'        => 'order earning',
                     'status'      => 'complete',
                 ]);
 
             }
+            if($order->refferal_commission && $order->refferal_commission > 0){
+                $customer = Customer::where('id', $order->customer_id)->first();
+                $refferal_customer = Customer::where('id', $customer->refferal_1)->first();
+                $refferal_customer->balance += $order->refferal_commission;
+                $refferal_customer->save();
+
+                $transaction_data = Transaction::create([
+                    'user_id'     => $refferal_customer->id,
+                    'user_type'   => 'customer',
+                    'amount'      => $order->refferal_commission,
+                    'balance'     => $refferal_customer->balance,
+                    'amount_type' => 'credit',
+                    'note'        => 'refferal earning',
+                    'status'      => 'complete',
+                ]);
+
+                $expense = new Expense();
+                $expense->name = 'Reffer Commission - ' . $order->invoice_id;
+                $expense->expense_cat_id = 4;
+                $expense->amount = $order->refferal_commission;
+                $expense->note = 'Reffer Commission - ' . $order->invoice_id;
+                $expense->date = Carbon::now();
+                $expense->status = 1;
+                $expense->save();
+
+            }
+
+
         }
         if ($request->status == 8) {
-            // reseller amount deduction    
+            // reseller amount deduction
             $amount = $order->shipping_charge;
             $reseller_customer = Customer::where(['id' => $order->reseller_id, 'status' => 'active'])->first();
             //return $reseller_customer;
-           
+
             if ($reseller_customer) {
                 $reseller_customer->balance -= $amount;
                 $reseller_customer->save();
-            }   
+            }
             if($order->courier == 'pathao') {
                 if ($reseller_customer) {
-                    $return_amount = $amount / 2; 
+                    $return_amount = $amount / 2;
                 } else {
-                    $return_amount = $amount + ($amount / 2); 
+                    $return_amount = $amount + ($amount / 2);
                 }
             } else {
-                $return_amount = $amount; 
+                $return_amount = $amount;
             }
 
             if($order->seller_id == 1 &&  $order->reseller_id == NULL){
@@ -316,9 +345,7 @@ class OrderController extends Controller
                 // $seller->save();
             }
 
-           
 
-            
         }
 
         $shipping_update = Shipping::where('order_id', $order->id)->first();
@@ -414,7 +441,7 @@ class OrderController extends Controller
                             'user_type'   => 'seller',
                             'amount'      => $add_balance,
                             'balance'     => $seller_update->balance,
-                            'amount_type' => 'credit', 
+                            'amount_type' => 'credit',
                             'note'        => 'order earning',
                             'status'      => 'complete',
                         ]);
@@ -432,14 +459,12 @@ class OrderController extends Controller
                         'user_type'   => 'customer',
                         'amount'      => $order->commission,
                         'balance'     => $balance_update->balance,
-                        'amount_type' => 'credit', 
+                        'amount_type' => 'credit',
                         'note'        => 'order earning',
                         'status'      => 'complete',
                     ]);
 
                 }
-
-
 
             }
         }

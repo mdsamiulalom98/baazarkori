@@ -183,7 +183,7 @@ class CustomerController extends Controller
             'amount'=>'required',
             'payment_method'=>'required',
         ]);
-              
+
         $payment                 = new Wallet();
         $payment->customer_id    = Auth::guard('customer')->user()->id;
         $payment->name           = Auth::guard('customer')->user()->name ;
@@ -198,17 +198,17 @@ class CustomerController extends Controller
         //return $payment;
         $payment->save();
         // return redirect()->route('customer.wallet');
-        
+
         Toastr::success('Success','Your payment successfully');
         return redirect()->back();
-       
+
     }
     public function wallet(){
         // $wallet = Wallet::select('id','phone','name','amount','status','payment_method','created_at')->where('customer_id',Auth::guard('customer')->user()->id)->get();
         $wallet = Transaction::where('user_id', Auth::guard('customer')->user()->id)->get();
         // return $wallet;
         $addseller = Customeraddamount::where('customer_id',Auth::guard('customer')->user()->id)->get();
-        // return $wallet;  
+        // return $wallet;
        return view('frontEnd.layouts.customer.wallet',compact('wallet','addseller'));
    }
 
@@ -220,10 +220,6 @@ class CustomerController extends Controller
         Toastr::success('Success','Data cancel successfully');
         return redirect()->back();
     }
-
-
-
-
     public function register_note()
     {
         $select_charge = ShippingCharge::where(['status' => 1, 'pos' => 1])->first();
@@ -418,7 +414,6 @@ class CustomerController extends Controller
         return redirect()->route('customer.account');
     }
 
-
     public function checkout()
     {
         $bkash_gateway = PaymentGateway::where(['status' => 1, 'type' => 'bkash'])->first();
@@ -443,24 +438,21 @@ class CustomerController extends Controller
             return redirect()->back();
         }
 
-        
         $discount = Session::get('discount');
-
 
         if (count($this->seller_order()) > 1) {
             $shippingfee = Session::get('shipping') / count($this->seller_order());
         }else{
             $shippingfee = Session::get('shipping');
         }
-   
-        
 
         $shipping_area = District::where('id', $request->area)->first() ?? 'N/A';
         $exits_customer = Customer::where('phone', $request->phone)->select('phone', 'id')->first();
         if ($exits_customer) {
             $customer_id = $exits_customer->id;
         } else {
-            $reffer_id = Auth::guard('customer')->user() && Auth::guard('customer')->user()->seller_type == 1 ? Auth::guard('customer')->user()->id : 0;
+            $customer = Auth::guard('customer')->user();
+            $reffer_id = $customer && $customer->seller_type == 1 ? $customer->id : 0;
             $last_id = Customer::max('id');
             $cust_id = $last_id ? 'C' . str_pad($last_id + 1, 5, '0', STR_PAD_LEFT) : 'C00001';
             $password = rand(111111, 999999);
@@ -480,23 +472,32 @@ class CustomerController extends Controller
         }
 
         // order data save
-        
+
         // return $this->seller_order();
         foreach ($this->seller_order() as $seller_id) {
 
-            $wholeselltotal = $reselltotal = $purchase_amount = $advancetotal = $subtotal = 0;
+            $wholeselltotal = $reselltotal = $purchase_amount = $advancetotal = $subtotal = $refferal_commission = 0;
             $shopping = Cart::instance('shopping')->content();
-            
+
             $carts = $shopping->filter(function($item) use ($seller_id) {
-                return $item->options->seller_id == $seller_id; 
+                return $item->options->seller_id == $seller_id;
             });
-     
+
             foreach ($carts as $cart) {
                 $purchase_amount += $cart->options->purchase_price * $cart->qty;
                 $wholeselltotal += $cart->options->whole_sell_price * $cart->qty;
                 $reselltotal += $cart->options->reseller_price * $cart->qty;
                 $advancetotal += $cart->options->advance * $cart->qty;
                 $subtotal += $cart->subtotal;
+                $customer = Auth::guard('customer')->user();
+                $wholesellprice = $cart->options->whole_sell_price;
+                $product_qty = $cart->qty;
+                if($customer->refferal_1) {
+                    $reffer_customer = Customer::find($customer->refferal_1);
+                    if ($reffer_customer) {
+                        $refferal_commission += (($wholesellprice * $product_qty) / 100) * 2;
+                    }
+                }
 
                 $seller = Seller::find($seller_id);
                 $seller_total = $cart->price*$cart->qty;
@@ -520,7 +521,7 @@ class CustomerController extends Controller
                 }
             }
             //return $commision;
-        
+
             if (Auth::guard('customer')->user() && Auth::guard('customer')->user()->seller_type != 0) {
                 $subtotal = $reselltotal;
             } else {
@@ -537,6 +538,7 @@ class CustomerController extends Controller
             $order->customer_id = $customer_id;
             $order->seller_id = $seller_id;
             $order->seller_commission = $commision ?? 0;
+            $order->refferal_commission = $refferal_commission ?? 0;
             $order->reseller_id = Auth::guard('customer')->user() && Auth::guard('customer')->user()->seller_type != 0 ? Auth::guard('customer')->user()->id : NULL;
             $order->order_status = 1;
             $order->advance = $advancetotal;
@@ -567,7 +569,7 @@ class CustomerController extends Controller
             $payment->save();
 
             // order details data save
- 
+
             foreach ($carts as $cart) {
                 $seller = Seller::find($cart->options->seller_id);
                 $seller_total = $cart->price*$cart->qty;
@@ -592,7 +594,7 @@ class CustomerController extends Controller
                 $order_details->product_color = $cart->options->product_color;
                 $order_details->product_size = $cart->options->product_size;
                 $order_details->sale_price = Auth::guard('customer')->user() && Auth::guard('customer')->user()->seller_type != 0 ? $cart->options->reseller_price : $cart->price;
-                $order_details->commission = Auth::guard('customer')->user() && Auth::guard('customer')->user()->seller_type != 0 ? $reselltotal - $wholeselltotal : 0;
+                $order_details->commission = Auth::guard('customer')->user() && Auth::guard('customer')->user()->seller_type != 0 ? $cart->options->reseller_price - $cart->options->whole_sell_price : 0;
                 $order_details->qty = $cart->qty;
                 $order_details->seller_id        =   $cart->options->seller_id ?? 1;
                 $order_details->seller_commision =   $commision;
@@ -865,7 +867,7 @@ class CustomerController extends Controller
         foreach ($cartItems as $item) {
             $sellerId = $item->options->seller_id;
             if (!in_array($sellerId, $seller_orders)) {
-                $seller_orders[] = $sellerId; 
+                $seller_orders[] = $sellerId;
             }
         }
         return $seller_orders;
@@ -877,7 +879,7 @@ class CustomerController extends Controller
         foreach ($cartItems as $item) {
             $sellerId = $item->options->seller_id;
             if (!in_array($sellerId, $seller_orders)) {
-                $seller_orders[] = $sellerId; 
+                $seller_orders[] = $sellerId;
             }
         }
         return count($seller_orders);
@@ -891,7 +893,7 @@ class CustomerController extends Controller
     }
 
     public function boostc_request(Request $request)
-    {   
+    {
         $categories = BoostManage::where('status', 1)
             ->select('id', 'boost_name', 'amount')
             ->get();
@@ -905,7 +907,7 @@ class CustomerController extends Controller
 
         return view('frontEnd.layouts.customer.boostc_request', compact('categories', 'casual_dollar', 'normal_dollar'));
     }
-    
+
     public function boostc_store(Request $request)
     {
         $this->validate($request, [
@@ -913,16 +915,16 @@ class CustomerController extends Controller
             'type' => 'required',
             'amount' => 'required',
         ]);
-        
+
 
         $boost_links = $request->boost_link;
         $boost_links_json = json_encode($boost_links);
         $boost_link_count = is_array($boost_links) ? count($boost_links) : 0;
-      
+
 
 
         $site_setting = GeneralSetting::where('status', 1)->select('normal_rate','casual_rate')->first();
-        
+
         if ($boost_link_count > 1) {
             $dollar = $site_setting->casual_rate;
         }else {
@@ -953,11 +955,11 @@ class CustomerController extends Controller
             'user_type'   => 'customer',
             'amount'      => $boosting_balance,
             'balance'     => $seller->balance,
-            'amount_type' => 'debit', 
+            'amount_type' => 'debit',
             'note'        => 'boosting order',
             'status'      => 'complete',
         ]);
-         
+
 
         $boosting = new Boost();
         $boosting->user_id       = Auth::guard('customer')->user()->id;
